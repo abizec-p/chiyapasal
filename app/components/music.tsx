@@ -22,6 +22,13 @@ type Station =
   | { name: string; icon: any; type: "youtube"; playlistId: string };
 
 const stations: Station[] = [
+  
+  {
+    name: "Music",
+    icon: FaMusic,
+    type: "youtube",
+    playlistId: "PLHrgE17eU8XU",
+  },
   {
     name: "Radio",
     icon: IoMdRadio,
@@ -30,12 +37,6 @@ const stations: Station[] = [
       { src: "/radio/radio1.mp3", title: "Radio nepal baal karyakram" },
       { src: "/radio/radio2.mp3", title: "Ujyalo Fm Bihana ko khabar" },
     ],
-  },
-  {
-    name: "Music",
-    icon: FaMusic,
-    type: "youtube",
-    playlistId: "PLHrgE17eU8XU",
   },
   {
     name: "Bhajan",
