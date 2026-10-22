@@ -13,7 +13,12 @@ declare global {
 }
 
 type Station =
-  | { name: string; icon: any; type: "local"; tracks: { src: string; title: string }[] }
+  | {
+      name: string;
+      icon: any;
+      type: "local";
+      tracks: { src: string; title: string }[];
+    }
   | { name: string; icon: any; type: "youtube"; playlistId: string };
 
 const stations: Station[] = [
@@ -26,7 +31,12 @@ const stations: Station[] = [
       { src: "/radio/radio2.mp3", title: "Ujyalo Fm Bihana ko khabar" },
     ],
   },
-  { name: "Music", icon: FaMusic, type: "youtube", playlistId: "PLS-qqxfHvVDg" },
+  {
+    name: "Music",
+    icon: FaMusic,
+    type: "youtube",
+    playlistId: "PLHrgE17eU8XU",
+  },
   {
     name: "Bhajan",
     icon: FaOm,
@@ -40,9 +50,7 @@ const stations: Station[] = [
     name: "Chill",
     icon: PiBirdBold,
     type: "local",
-    tracks: [
-      { src: "/chill/chill1.mp3", title: "Birds and village sound" },
-    ],
+    tracks: [{ src: "/chill/chill1.mp3", title: "Birds and village sound" }],
   },
 ];
 
@@ -80,7 +88,10 @@ export default function Music() {
         playerVars: { playsinline: 1 },
         events: {
           onReady: () => {
-            ytRef.current.cuePlaylist({ listType: "playlist", list: ytStation.playlistId });
+            ytRef.current.cuePlaylist({
+              listType: "playlist",
+              list: ytStation.playlistId,
+            });
           },
           onStateChange: (e: any) => {
             if (!isYtRef.current) return;
@@ -99,7 +110,11 @@ export default function Music() {
       create();
     } else {
       window.onYouTubeIframeAPIReady = create;
-      if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+      if (
+        !document.querySelector(
+          'script[src="https://www.youtube.com/iframe_api"]',
+        )
+      ) {
         const s = document.createElement("script");
         s.src = "https://www.youtube.com/iframe_api";
         document.body.appendChild(s);
@@ -188,7 +203,8 @@ export default function Music() {
     }
   };
 
-  const title = station.type === "local" ? station.tracks[trackIndex].title : ytTitle;
+  const title =
+    station.type === "local" ? station.tracks[trackIndex].title : ytTitle;
 
   return (
     <>
@@ -196,10 +212,13 @@ export default function Music() {
         ref={audioRef}
         onPlay={() => !isYtRef.current && setPlaying(true)}
         onPause={() => !isYtRef.current && setPlaying(false)}
-        onEnded={() => station.type === "local" && playLocal(station, trackIndex + 1)}
+        onEnded={() =>
+          station.type === "local" && playLocal(station, trackIndex + 1)
+        }
         onTimeUpdate={(e) => {
           const a = e.currentTarget;
-          if (!isYtRef.current && a.duration) setProgress((a.currentTime / a.duration) * 100);
+          if (!isYtRef.current && a.duration)
+            setProgress((a.currentTime / a.duration) * 100);
         }}
       />
 
@@ -207,7 +226,9 @@ export default function Music() {
         <div
           ref={ytBoxRef}
           className={
-            isYt ? "overflow-hidden rounded-2xl shadow-xl" : "h-0 w-0 overflow-hidden"
+            isYt
+              ? "overflow-hidden rounded-2xl shadow-xl"
+              : "h-0 w-0 overflow-hidden"
           }
         />
 
@@ -237,10 +258,15 @@ export default function Music() {
 
           <div className="flex min-w-0 flex-1 flex-col gap-2 md:gap-3">
             <div className="min-w-0">
-              <div className="truncate text-sm leading-none md:text-base">{title}</div>
+              <div className="truncate text-sm leading-none md:text-base">
+                {title}
+              </div>
               <p className="mt-1 text-xs text-white/50">{station.name}</p>
             </div>
-            <div onClick={seek} className="flex h-3 w-full cursor-pointer items-center">
+            <div
+              onClick={seek}
+              className="flex h-3 w-full cursor-pointer items-center"
+            >
               <div className="h-1 w-full rounded-full bg-white/10">
                 <div
                   className="h-1 rounded-full bg-blue-500"
