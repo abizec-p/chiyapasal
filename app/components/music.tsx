@@ -1,16 +1,9 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { FaPlay, FaPause, FaMusic, FaOm } from "react-icons/fa";
+import { useRef, useState } from "react";
+import { FaPlay, FaPause, FaMusic, FaOm,  } from "react-icons/fa";
 import { MdSkipPrevious, MdSkipNext } from "react-icons/md";
 import { PiBirdBold } from "react-icons/pi";
 import { IoMdRadio } from "react-icons/io";
-
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
 
 type Station =
   | {
@@ -19,124 +12,118 @@ type Station =
       type: "local";
       tracks: { src: string; title: string }[];
     }
-  | { name: string; icon: any; type: "youtube"; playlistId: string };
+  | { name: string; icon: any; type: "live" };
+
+type RadioStation = {
+  stationuuid: string;
+  name: string;
+  url_resolved: string;
+  tags: string;
+};
 
 const stations: Station[] = [
   {
-    name: "Music",
-    icon: FaMusic,
-    type: "youtube",
-    playlistId: "PLHrgE17eU8XU",
+    name: "Nearby",
+    icon: IoMdRadio,
+    type: "live",
   },
   {
-    name: "Radio",
-    icon: IoMdRadio,
+    name: "Traditional Nepali Music",
+    icon: FaMusic,
     type: "local",
     tracks: [
-      { src: "/radio/radio1.mp3", title: "Radio nepal baal karyakram" },
-      { src: "/radio/radio2.mp3", title: "Ujyalo Fm Bihana ko khabar" },
+      { src: "/music/nep1.mp3", title: "Nepali music by Surya_2050" },
+      { src: "/music/nep2.mp3", title: "Traditional music by Surya_2050" },
+      { src: "/music/nep3.mp3", title: "Nepali Flute music by Surya_2050" },
     ],
   },
+
   {
     name: "Bhajan",
     icon: FaOm,
     type: "local",
     tracks: [
-      { src: "/bhajan/bhajan1.mp3", title: "Radio Nepal bihani Bhajan" },
-      { src: "/bhajan/bhajan2.mp3", title: "Aarati ko bela vayo" },
+      { src: "/music/bhajan1.mp3", title: "Radio Nepal bihani Bhajan" },
+      { src: "/music/bhajan1.mp3", title: "Radio Nepal bihani Bhajan" },
+      { src: "/music/bhajan2.mp3", title: "Bhajan Playlist" },
+      { src: "/music/bhajan3.mp3", title: "Morning Bhajan" },
+      { src: "/music/bhajan4.mp3", title: "Enjoy this beautiful bhajan" },
+      { src: "/music/bhajan5.mp3", title: "Bhajan kirtan" },
     ],
   },
   {
     name: "Chill",
     icon: PiBirdBold,
     type: "local",
-    tracks: [{ src: "/chill/chill1.mp3", title: "Birds and village sound" }],
+    tracks: [{ src: "/music/bg-music", title: "Birds and village sound" }],
   },
+  
 ];
 
-const ytStation = stations.find((s) => s.type === "youtube") as Extract<
-  Station,
-  { type: "youtube" }
->;
+
+const RADIO_API = "https://de1.api.radio-browser.info/json";
+const FALLBACK_COUNTRY = "CA"; // used when location is denied or few stations nearby
+
+const onlyHttps = (list: RadioStation[]) =>
+  list.filter((s) => s.url_resolved?.startsWith("https://"));
+
+async function fetchNearby(lat: number, lng: number, radiusKm = 100) {
+  const params = new URLSearchParams({
+    geo_lat: String(lat),
+    geo_long: String(lng),
+    geo_distance: String(radiusKm * 1000),
+    has_geo_info: "true",
+    hidebroken: "true",
+    order: "votes",
+    reverse: "true",
+    limit: "60",
+  });
+  const res = await fetch(`${RADIO_API}/stations/search?${params}`);
+  if (!res.ok) throw new Error("Radio lookup failed");
+  return onlyHttps(await res.json());
+}
+
+async function fetchByCountry(code: string) {
+  const res = await fetch(
+    `${RADIO_API}/stations/bycountrycodeexact/${code}?hidebroken=true&order=votes&reverse=true&limit=60`,
+  );
+  if (!res.ok) throw new Error("Radio lookup failed");
+  return onlyHttps(await res.json());
+}
+
+const registerClick = (uuid: string) => {
+  fetch(`${RADIO_API}/url/${uuid}`).catch(() => {});
+};
+
+const getPosition = () =>
+  new Promise<GeolocationPosition>((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("No geolocation"));
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      timeout: 8000,
+    });
+  });
+
+/* ---------- Component ---------- */
 
 export default function Music() {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const ytBoxRef = useRef<HTMLDivElement>(null);
-  const ytRef = useRef<any>(null);
-  const isYtRef = useRef(false);
+  const activeRef = useRef(0); // lets async radio loading know if user switched away
 
   const [active, setActive] = useState(0);
   const [trackIndex, setTrackIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [ytTitle, setYtTitle] = useState("Press play");
+
+  // radio state
+  const [radioList, setRadioList] = useState<RadioStation[]>([]);
+  const [radioIndex, setRadioIndex] = useState(0);
+  const [radioLoading, setRadioLoading] = useState(false);
+  const [radioNote, setRadioNote] = useState("");
+  const [streamError, setStreamError] = useState(false);
 
   const station = stations[active];
-  const isYt = station.type === "youtube";
+  const isLive = station.type === "live";
   const ActiveIcon = station.icon;
-
-  // YouTube player: created once, only used by the Music station
-  useEffect(() => {
-    const create = () => {
-      if (!ytBoxRef.current) return;
-      const el = document.createElement("div");
-      ytBoxRef.current.appendChild(el);
-
-      ytRef.current = new window.YT.Player(el, {
-        width: "1",
-        height: "1",
-        playerVars: { playsinline: 1 },
-        events: {
-          onReady: () => {
-            ytRef.current.cuePlaylist({
-              listType: "playlist",
-              list: ytStation.playlistId,
-            });
-          },
-          onStateChange: (e: any) => {
-            if (!isYtRef.current) return;
-            if (e.data === 1) {
-              setPlaying(true);
-              setYtTitle(ytRef.current?.getVideoData?.().title || "Playing");
-            }
-            if (e.data === 2) setPlaying(false);
-          },
-          onError: (e: any) => console.log("YT error:", e.data),
-        },
-      });
-    };
-
-    if (window.YT?.Player) {
-      create();
-    } else {
-      window.onYouTubeIframeAPIReady = create;
-      if (
-        !document.querySelector(
-          'script[src="https://www.youtube.com/iframe_api"]',
-        )
-      ) {
-        const s = document.createElement("script");
-        s.src = "https://www.youtube.com/iframe_api";
-        document.body.appendChild(s);
-      }
-    }
-
-    return () => {
-      ytRef.current?.destroy?.();
-      ytRef.current = null;
-      if (ytBoxRef.current) ytBoxRef.current.innerHTML = "";
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!playing || !isYt) return;
-    const id = setInterval(() => {
-      const p = ytRef.current;
-      const d = p?.getDuration?.();
-      if (d > 0) setProgress((p.getCurrentTime() / d) * 100);
-    }, 500);
-    return () => clearInterval(id);
-  }, [playing, isYt]);
 
   const playLocal = (st: Extract<Station, { type: "local" }>, i: number) => {
     const audio = audioRef.current;
@@ -148,90 +135,151 @@ export default function Music() {
     audio.play();
   };
 
-  const switchStation = (i: number) => {
-    const next = stations[i];
-    audioRef.current?.pause();
-    ytRef.current?.pauseVideo?.();
+  const playRadio = (list: RadioStation[], i: number) => {
+    const audio = audioRef.current;
+    if (!audio || list.length === 0) return;
+    const n = (i + list.length) % list.length;
+    setRadioIndex(n);
+    setStreamError(false);
+    audio.src = list[n].url_resolved;
+    audio.play().catch(() => {});
+    registerClick(list[n].stationuuid);
+  };
 
-    isYtRef.current = next.type === "youtube";
+  const loadRadio = async (): Promise<RadioStation[]> => {
+    setRadioLoading(true);
+    setRadioNote("");
+    let list: RadioStation[] = [];
+
+    try {
+      const { coords } = await getPosition();
+      list = await fetchNearby(coords.latitude, coords.longitude);
+      if (list.length >= 5) {
+        setRadioNote("Near you");
+      } else {
+        list = [];
+      }
+    } catch {
+      list = [];
+    }
+
+    if (list.length === 0) {
+      try {
+        list = await fetchByCountry(FALLBACK_COUNTRY);
+        setRadioNote("Popular stations");
+      } catch {
+        setRadioNote("Couldn't load stations");
+      }
+    }
+
+    setRadioList(list);
+    setRadioLoading(false);
+    return list;
+  };
+
+  const switchStation = async (i: number) => {
+    const next = stations[i];
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute("src"); 
+      audio.load();
+    }
+
+    activeRef.current = i;
     setActive(i);
     setTrackIndex(0);
     setProgress(0);
     setPlaying(false);
+    setStreamError(false);
 
-    if (next.type === "local") playLocal(next, 0);
-    else ytRef.current?.playVideo?.();
+    if (next.type === "local") {
+      playLocal(next, 0);
+    } else {
+      const list = radioList.length ? radioList : await loadRadio();
+      if (activeRef.current !== i) return; // user switched away while loading
+      playRadio(list, 0);
+    }
   };
 
   const toggle = () => {
-    if (station.type === "youtube") {
-      if (playing) ytRef.current?.pauseVideo();
-      else ytRef.current?.playVideo();
-    } else {
-      const a = audioRef.current;
-      if (!a) return;
+    const a = audioRef.current;
+    if (!a) return;
+
+    if (station.type === "live") {
+      if (radioLoading) return;
       if (a.paused) {
-        if (!a.src) playLocal(station, trackIndex);
-        else a.play();
-      } else a.pause();
+        if (!a.src) playRadio(radioList, radioIndex);
+        else a.play().catch(() => {});
+      } else {
+        a.pause();
+      }
+      return;
+    }
+
+    if (a.paused) {
+      if (!a.src) playLocal(station, trackIndex);
+      else a.play();
+    } else {
+      a.pause();
     }
   };
 
   const step = (dir: 1 | -1) => {
     if (station.type === "local") {
       playLocal(station, trackIndex + dir);
-    } else {
-      const p = ytRef.current;
-      const list = p?.getPlaylist?.();
-      if (!list || list.length === 0) return;
-      p.playVideoAt((p.getPlaylistIndex() + dir + list.length) % list.length);
+    } else if (!radioLoading) {
+      playRadio(radioList, radioIndex + dir);
     }
   };
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (station.type === "live") return; // live streams can't be seeked
     const rect = e.currentTarget.getBoundingClientRect();
     const ratio = (e.clientX - rect.left) / rect.width;
-    if (station.type === "youtube") {
-      const d = ytRef.current?.getDuration?.();
-      if (d > 0) {
-        ytRef.current.seekTo(ratio * d, true);
-        setProgress(ratio * 100);
-      }
-    } else {
-      const a = audioRef.current;
-      if (a?.duration) a.currentTime = ratio * a.duration;
-    }
+    const a = audioRef.current;
+    if (a?.duration) a.currentTime = ratio * a.duration;
   };
 
-  const title =
-    station.type === "local" ? station.tracks[trackIndex].title : ytTitle;
+  let title: string;
+  if (station.type === "local") {
+    title = station.tracks[trackIndex].title;
+  } else if (radioLoading) {
+    title = "Finding stations near you…";
+  } else if (streamError) {
+    title = "Stream unavailable, press next";
+  } else {
+    title = radioList[radioIndex]?.name || "No stations found";
+  }
+
+  const subtitle =
+    station.type === "live" && radioNote
+      ? `${station.name} · ${radioNote}`
+      : station.name;
 
   return (
     <>
       <audio
         ref={audioRef}
-        onPlay={() => !isYtRef.current && setPlaying(true)}
-        onPause={() => !isYtRef.current && setPlaying(false)}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
         onEnded={() =>
           station.type === "local" && playLocal(station, trackIndex + 1)
         }
+        onError={() => {
+          if (station.type === "live") {
+            setPlaying(false);
+            setStreamError(true);
+          }
+        }}
         onTimeUpdate={(e) => {
           const a = e.currentTarget;
-          if (!isYtRef.current && a.duration)
+          if (station.type === "local" && isFinite(a.duration) && a.duration)
             setProgress((a.currentTime / a.duration) * 100);
         }}
       />
 
       <div className="absolute bottom-20 left-1/2 z-50 flex w-[92vw] max-w-150 -translate-x-1/2 flex-col items-center gap-3 md:bottom-30 mt-5">
-        <div
-          ref={ytBoxRef}
-          className={
-            isYt
-              ? "overflow-hidden rounded-2xl shadow-xl"
-              : "h-0 w-0 overflow-hidden"
-          }
-        />
-
         <div className="flex gap-3 text-sm md:gap-4">
           {stations.map((s, i) => {
             const Icon = s.icon;
@@ -261,22 +309,34 @@ export default function Music() {
               <div className="truncate text-sm leading-none md:text-base">
                 {title}
               </div>
-              <p className="mt-1 text-xs text-white/50">{station.name}</p>
+              <p className="mt-1 truncate text-xs text-white/50">{subtitle}</p>
             </div>
-            <div
-              onClick={seek}
-              className="flex h-3 w-full cursor-pointer items-center"
-            >
-              <div className="h-1 w-full rounded-full bg-white/10">
-                <div
-                  className="h-1 rounded-full bg-blue-500"
-                  style={{ width: `${progress}%` }}
+
+            {isLive ? (
+              <div className="flex h-3 items-center gap-2 text-xs text-white/60">
+                <span
+                  className={`h-2 w-2 rounded-full bg-red-500 ${
+                    playing ? "animate-pulse" : "opacity-40"
+                  }`}
                 />
+                LIVE
               </div>
-            </div>
+            ) : (
+              <div
+                onClick={seek}
+                className="flex h-3 w-full cursor-pointer items-center"
+              >
+                <div className="h-1 w-full rounded-full bg-white/10">
+                  <div
+                    className="h-1 rounded-full bg-blue-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-1  md:gap-2">
+          <div className="flex shrink-0 items-center gap-1 md:gap-2">
             <button onClick={() => step(-1)} aria-label="Previous">
               <MdSkipPrevious className="text-2xl" />
             </button>
