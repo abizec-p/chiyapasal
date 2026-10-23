@@ -62,7 +62,7 @@ const stations: Station[] = [
 
 
 const RADIO_API = "https://de1.api.radio-browser.info/json";
-const FALLBACK_COUNTRY = "CA"; // used when location is denied or few stations nearby
+const FALLBACK_COUNTRY = "CA"; 
 
 const onlyHttps = (list: RadioStation[]) =>
   list.filter((s) => s.url_resolved?.startsWith("https://"));
@@ -249,7 +249,7 @@ export default function Music() {
   } else if (streamError) {
     title = "Stream unavailable, press next";
   } else {
-    title = radioList[radioIndex]?.name || "No stations found";
+    title = radioList[radioIndex]?.name || "Press radio - Find stations near you";
   }
 
   const subtitle =

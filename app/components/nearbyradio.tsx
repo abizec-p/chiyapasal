@@ -34,7 +34,7 @@ export default function NearbyRadio() {
         setStations(data);
       } catch (err) {
         console.error(err);
-        setError("Couldn't load stations.");
+        setError("Couldn't load stations");
       } finally {
         setLoading(false);
       }
