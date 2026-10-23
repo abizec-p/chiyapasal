@@ -22,7 +22,6 @@ type Station =
   | { name: string; icon: any; type: "youtube"; playlistId: string };
 
 const stations: Station[] = [
-  
   {
     name: "Music",
     icon: FaMusic,
@@ -223,7 +222,7 @@ export default function Music() {
         }}
       />
 
-      <div className="absolute bottom-35 left-1/2 z-50 flex w-[92vw] max-w-150 -translate-x-1/2 flex-col items-center gap-3 md:bottom-30 mt-5">
+      <div className="absolute bottom-20 left-1/2 z-50 flex w-[92vw] max-w-150 -translate-x-1/2 flex-col items-center gap-3 md:bottom-30 mt-5">
         <div
           ref={ytBoxRef}
           className={

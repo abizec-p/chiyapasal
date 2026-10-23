@@ -34,7 +34,7 @@ export default function Home() {
     <div
       className={`${
         isNight
-          ? "bg-[url('/night-tea-mobile.jpg')] md:bg-[url('/night-teashop.jpg')]"
+          ? "bg-[url('/night-teashop-bg.png')] md:bg-[url('/night-teashop.jpg')]"
           : "bg-[url('/day-tea-mobile.png')] md:bg-[url('/morning-teashop.jpg')]"
       } relative min-h-dvh overflow-hidden bg-cover bg-center`}
     >
@@ -81,22 +81,24 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="pointer-events-none absolute z-60 mt-16 flex w-full flex-col items-center justify-center px-4 text-center font-[family-name:var(--font-anek)] font-bold text-[#FFB703] md:mt-30">
-        <p className="text-base text-white text-shadow-lg md:text-xl">
+      <div className="pointer-events-none absolute z-60 mt-56 flex w-full flex-col items-center justify-center px-4 text-center font-[family-name:var(--font-anek)] font-bold text-[#FFB703] md:mt-30">
+        <p className="text-sm text-white text-shadow-lg md:text-xl">
           भरतपुर–६, चितवन
         </p>
-        <h1 className="origin-center text-7xl mt-8 [word-spacing:-0.08em] sm:text-7xl md:text-[120px]">
+        <h1 className="origin-center text-4xl mt-4 md:mt-8 [word-spacing:-0.08em] sm:text-7xl md:text-[120px]">
           तातो चिया, मिठो गफ
         </h1>
-        <p className="mt-2 text-sm text-white/90 md:absolute md:bottom-5 md:-mb-6 md:text-lg">
+        <p className= " md:mt-2 text-xs md:text-sm text-white/90 md:absolute md:bottom-5 md:-mb-6 md:text-lg">
           -A nostalgic Nepali chiya pasal experience.-
         </p>
       </div>
 
       <Music />
 
-      <div className="absolute bottom-14 z-50 flex w-full flex-wrap items-center justify-center gap-2 px-4 text-center text-xs text-white/90 md:bottom-15 md:text-sm">
-        <h1>शुभ बिहानी, खाता धेरै भइसक्यो, अलि अलि घटाइदिनु।</h1>
+      <div className="absolute  z-50 flex w-full flex-wrap items-center justify-center gap-2 px-4 text-center text-xs bottom-8 text-white/90 md:bottom-15 md:text-sm">
+        {isNight && <h1>शुभ रात्री, खाता धेरै भइसक्यो, अलि अलि घटाइदिनु।</h1>}
+        {!isNight && <h1>शुभ बिहानी, खाता धेरै भइसक्यो, अलि अलि घटाइदिनु।</h1>}
+
         <button
           className="rounded-full bg-white px-3 py-1 text-black"
           onClick={() => setOpen(true)}
@@ -111,7 +113,7 @@ export default function Home() {
           onClick={() => setOpen(false)}
         >
           <div
-            onClick={(e) => e.stopPropagation()} 
+            onClick={(e) => e.stopPropagation()}
             className="flex flex-col items-center gap-3"
           >
             <Image
