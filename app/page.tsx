@@ -34,8 +34,8 @@ export default function Home() {
     <div
       className={`${
         isNight
-          ? "bg-[url('/mobile-bg.jpg')] md:bg-[url('/night-teashop.jpg')]"
-          : "bg-[url('/mobile-bg.jpg')] md:bg-[url('/morning-teashop.jpg')]"
+          ? "bg-[url('/night-tea-mobile.jpg')] md:bg-[url('/night-teashop.jpg')]"
+          : "bg-[url('/day-tea-mobile.png')] md:bg-[url('/morning-teashop.jpg')]"
       } relative min-h-dvh overflow-hidden bg-cover bg-center`}
     >
       <div
